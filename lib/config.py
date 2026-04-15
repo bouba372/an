@@ -19,12 +19,19 @@ class ProjectConfig:
 
 def _get_service_account_info() -> dict[str, Any]:
     raw_value = os.environ["SERVICE_ACCOUNT_INFO"]
-    try:
-        parsed_obj: object = json.loads(raw_value)
-    except json.JSONDecodeError as e:
-        raise ValueError(
-            "SERVICE_ACCOUNT_INFO must be valid JSON that decodes to a JSON object"
-        ) from e
+
+    # Support either inline JSON or a path to a service account JSON file.
+    if os.path.isfile(raw_value):
+        with open(raw_value, encoding="utf-8") as f:
+            parsed_obj: object = json.load(f)
+    else:
+        try:
+            parsed_obj = json.loads(raw_value)
+        except json.JSONDecodeError as e:
+            raise ValueError(
+                "SERVICE_ACCOUNT_INFO must be a valid file path or valid JSON that decodes to a JSON object"
+            ) from e
+
     if not isinstance(parsed_obj, dict):
         raise ValueError("SERVICE_ACCOUNT_INFO must decode to a JSON object")
     return {str(key): value for key, value in parsed_obj.items()}

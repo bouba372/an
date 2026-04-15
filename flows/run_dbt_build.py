@@ -4,10 +4,14 @@ import subprocess
 import tempfile
 from pathlib import Path
 
+from dotenv import load_dotenv
 from prefect import flow, get_run_logger, task
 from prefect.artifacts import create_markdown_artifact
 
 from lib.config import ProjectConfig, get_config
+
+
+load_dotenv()
 
 
 def _profiles_yml_content(

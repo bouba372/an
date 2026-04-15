@@ -2,6 +2,7 @@ from collections.abc import Mapping
 from datetime import timedelta
 from typing import Sequence
 
+from dotenv import load_dotenv
 from prefect import flow, task
 from prefect.artifacts import create_table_artifact
 
@@ -13,6 +14,9 @@ from lib.config import ProjectConfig, get_config
 from lib.debat import DebatParseResult, parse_debats_files
 from lib.debat.bq_schemas import DEBATS_SCHEMAS
 from lib.extract import extract_file_contents, fetch_zip_file
+
+
+load_dotenv()
 
 
 @task(

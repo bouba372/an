@@ -1,6 +1,7 @@
 from collections.abc import Mapping
 import os
 
+from dotenv import load_dotenv
 from prefect import flow, get_run_logger, task
 from prefect.artifacts import create_table_artifact
 
@@ -11,6 +12,9 @@ from lib.amendements import (
     AMENDEMENTS_SCHEMAS,
 )
 from lib.extract import fetch_zip_file_to_temp
+
+
+load_dotenv()
 
 
 @task

@@ -1,6 +1,7 @@
 from collections.abc import Mapping
 from typing import Sequence
 
+from dotenv import load_dotenv
 from prefect import flow, get_run_logger, task
 from prefect.artifacts import create_table_artifact
 from prefect.tasks import task_input_hash
@@ -12,6 +13,9 @@ from lib.extract import fetch_zip_file
 from lib.scrutins.bq_schemas import SCRUTINS_SCHEMAS
 from lib.scrutins.models import ScrutinParseResult
 from lib.scrutins.parsing import parse_scrutins
+
+
+load_dotenv()
 
 
 @task(cache_key_fn=task_input_hash, cache_expiration=None)
