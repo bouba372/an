@@ -1,3 +1,6 @@
+DOCKER_REGISTRY ?= parleman-artifact-repo
+METABASE_IMAGE ?= metabase
+
 build_metabase: ## Build image for GCP (Linux/amd64 platform)
 	@echo "Building the image for GCP..."
 	docker pull --platform linux/amd64 metabase/metabase:v0.56.3
@@ -16,6 +19,7 @@ push_prefect_worker: build_prefect_worker ## Build and push image to Artifact Re
 
 deploy_prefect_worker:
 	gcloud run deploy prefect-worker \
+		--project ${GCP_PROJECT} \
 		--image=europe-west1-docker.pkg.dev/${GCP_PROJECT}/${DOCKER_REGISTRY}/prefect-worker \
 		--set-env-vars PREFECT_API_URL=${PREFECT_API_URL} \
 		--service-account ${SA_WORKER_NAME}@${GCP_PROJECT}.iam.gserviceaccount.com \

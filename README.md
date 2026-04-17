@@ -95,22 +95,22 @@ gcloud projects add-iam-policy-binding "$GCP_PROJECT" \
   --role "roles/bigquery.jobUser"
 
 gcloud projects add-iam-policy-binding "$GCP_PROJECT" \
-  --member "serviceAccount:${SA_RUNNER_NAME}@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
+  --member "serviceAccount:${SA_RUNNER_NAME}@${GCP_PROJECT}.iam.gserviceaccount.com" \
   --role "roles/bigquery.dataEditor"
 ```
 
 For worker:
 ```bash
-gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
-  --member "serviceAccount:${SA_WORKER_NAME}@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding "$GCP_PROJECT" \
+  --member "serviceAccount:${SA_WORKER_NAME}@${GCP_PROJECT}.iam.gserviceaccount.com" \
   --role "roles/run.invoker"
 
-gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
-  --member "serviceAccount:${SA_WORKER_NAME}@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding "$GCP_PROJECT" \
+  --member "serviceAccount:${SA_WORKER_NAME}@${GCP_PROJECT}.iam.gserviceaccount.com" \
   --role "roles/artifactregistry.reader"
 
-gcloud projects add-iam-policy-binding "$GCP_PROJECT_ID" \
-  --member "serviceAccount:${SA_WORKER_NAME}@${GCP_PROJECT_ID}.iam.gserviceaccount.com" \
+gcloud projects add-iam-policy-binding "$GCP_PROJECT" \
+  --member "serviceAccount:${SA_WORKER_NAME}@${GCP_PROJECT}.iam.gserviceaccount.com" \
   --role "roles/iam.serviceAccountUser"
 ```
 
@@ -133,7 +133,7 @@ GOOGLE_APPLICATION_CREDENTIALS=.secrets/parleman-sa.json
 ## Run Pipeline
 
 ```bash
-uv run python -m flows.upload_deputes_bg
+uv run python -m flows.upload_deputes_bq
 ```
 
 ## Metabase (local)
