@@ -1,136 +1,132 @@
 version: 2
 
 sources:
-  - name: raw_parleman
-    description: Raw tables loaded by the ParlemAN ingestion pipelines.
-    database: "{{ env_var('GCP_PROJECT') }}"
-    schema: "{{ env_var('BQ_DATASET') }}"
-    tables:
-      - name: acteurs
-      - name: mandats
-      - name: organes
-      - name: interventions
-      - name: points_seance
-      - name: comptes_rendus
-      - name: scrutins
-      - name: questions_ecrites
-      - name: questions_ecrites_renouvellements
-      - name: scrutin_votes_individuels
-      - name: scrutin_groupes_votes
-      - name: documents
-      - name: dossiers_parlementaires
-      - name: dossier_actes_legislatifs
-      - name: amendements
+- name: raw_parleman
+  description: Raw tables loaded by the ParlemAN ingestion pipelines.
+  database: "{{ env_var('GCP_PROJECT') }}"
+  schema: "{{ env_var('BQ_DATASET') }}"
+  tables:
+  - name: acteurs
+  - name: mandats
+  - name: organes
+  - name: interventions
+  - name: points_seance
+  - name: comptes_rendus
+  - name: scrutins
+  - name: questions_ecrites
+  - name: questions_ecrites_renouvellements
+  - name: scrutin_votes_individuels
+  - name: scrutin_groupes_votes
+  - name: documents
+  - name: dossiers_parlementaires
+  - name: dossier_actes_legislatifs
+  - name: amendements
 
 models:
-  - name: stg_deputes
-    description: Staging model for deputes data.
+- name: stg_mandats
+  description: Staging model for mandats data.
+  columns:
+  - name: mandat_uid
+    tests:
+    - not_null
 
-  - name: stg_mandats
-    description: Staging model for mandats data.
+- name: stg_organes
+  description: Staging model for organes data.
+  columns:
+  - name: organe_uid
+    tests:
+    - not_null
+    - unique
 
-  - name: stg_interventions
-    description: Staging model for interventions data.
+- name: stg_documents
+  description: Staging model for legislative documents.
+  columns:
+  - name: document_uid
+    tests:
+    - not_null
+    - unique
 
-  - name: stg_comptes_rendus
-    description: Staging model for comptes rendus data.
+- name: stg_dossiers_parlementaires
+  description: Staging model for parliamentary dossiers.
+  columns:
+  - name: dossier_uid
+    tests:
+    - not_null
+    - unique
 
-  - name: stg_points_seance
-    description: Staging model for points de seance data.
+- name: stg_dossier_actes_legislatifs
+  description: Staging model for dossier legislative acts.
+  columns:
+  - name: dossier_uid
+    tests:
+    - not_null
 
-  - name: stg_commissions
-    description: Staging model for commissions data.
+- name: int_depute_mandats
+  description: Intermediate model linking deputes and mandats.
 
-  - name: stg_organes
-    description: Staging model for organes data.
+- name: int_depute_commissions
+  description: Intermediate model linking deputes and commissions.
 
-  - name: stg_scrutins
-    description: Staging model for scrutins data.
+- name: int_interventions_enriched
+  description: Intermediate enriched interventions model.
 
-  - name: stg_scrutin_groupes_votes
-    description: Staging model for aggregated votes by group.
+- name: int_groupes
+  description: Intermediate model for groupes data.
 
-  - name: stg_scrutin_votes_individuels
-    description: Staging model for individual scrutin votes.
+- name: int_scrutin_groupes
+  description: Intermediate model for scrutin group votes.
 
-  - name: stg_documents
-    description: Staging model for legislative documents.
+- name: int_scrutin_groupes_enriched
+  description: Intermediate enriched model for scrutin group votes.
 
-  - name: stg_dossiers_parlementaires
-    description: Staging model for parliamentary dossiers.
+- name: int_dossier_actes
+  description: Intermediate model for timeline and act counts per dossier.
 
-  - name: stg_dossier_actes_legislatifs
-    description: Staging model for dossier legislative acts.
+- name: int_dossier_documents
+  description: Intermediate model for document counts per dossier.
 
-  - name: stg_amendements
-    description: Staging model for amendements data.
+- name: int_dossier_scrutins
+  description: Intermediate model for vote statistics per dossier.
 
-  - name: int_depute_mandats
-    description: Intermediate model linking deputes and mandats.
+- name: int_dossier_amendements
+  description: Intermediate model for amendment statistics per dossier.
+- name: int_depute_dans_partis
+  description: Intermediate model linking deputes to their partis and groupes.
 
-  - name: int_depute_commissions
-    description: Intermediate model linking deputes and commissions.
+- name: int_liste_siege
+  description: Intermediate model for mapping deputes to their place in the hemicycle.
 
-  - name: int_interventions_enriched
-    description: Intermediate enriched interventions model.
-  
-  - name: int_groupes
-    description: Intermediate model for groupes data.
+- name: int_mandats_actifs
+  description: Intermediate model for active mandats and their circonscriptions.
 
-  - name: int_scrutin_groupes
-    description: Intermediate model for scrutin group votes.
-  
-  - name: int_scrutin_groupes_enriched
-    description: Intermediate enriched model for scrutin group votes.
+- name: mart_groupes_co_vote
+  description: Mart for co-voting patterns between groupes.
+- name: mart_depute_activity
+  description: Mart for depute activity analytics.
 
-  - name: int_dossier_actes
-    description: Intermediate model for timeline and act counts per dossier.
+- name: mart_groupe_activity
+  description: Mart for groupe activity analytics.
 
-  - name: int_dossier_documents
-    description: Intermediate model for document counts per dossier.
+- name: mart_commission_activity
+  description: Mart for commission activity analytics.
 
-  - name: int_dossier_scrutins
-    description: Intermediate model for vote statistics per dossier.
+- name: mart_interventions_time
+  description: Mart for interventions over time.
 
-  - name: int_dossier_amendements
-    description: Intermediate model for amendment statistics per dossier.
-  - name: int_depute_dans_partis
-    description: Intermediate model linking deputes to their partis and groupes.
+- name: mart_interventions_enriched
+  description: Final enriched interventions mart.
 
-  - name: int_liste_siege
-    description: Intermediate model for mapping deputes to their place in the hemicycle.
-  
-  - name: int_mandats_actifs
-    description: Intermediate model for active mandats and their circonscriptions.
+- name: mart_deputes_circonscriptions
+  description: Mart map-ready for deputes and circonscriptions analytics.
 
-  - name: mart_groupes_co_vote
-    description: Mart for co-voting patterns between groupes.
+- name: mart_circonscription_activity
+  description: One row per circonscription with deputes and interventions aggregates.
 
-  - name: mart_depute_activity
-    description: Mart for depute activity analytics.
+- name: mart_dossiers_enriched
+  description: Enriched mart providing 360 view of legislative dossiers.
 
-  - name: mart_groupe_activity
-    description: Mart for groupe activity analytics.
+- name: mart_dossiers_votes_groupes
+  description: Mart aggregating vote counts by political group per dossier.
 
-  - name: mart_commission_activity
-    description: Mart for commission activity analytics.
-
-  - name: mart_interventions_time
-    description: Mart for interventions over time.
-
-  - name: mart_interventions_enriched
-    description: Final enriched interventions mart.
-
-  - name: mart_deputes_circonscriptions
-    description: Mart map-ready for deputes and circonscriptions analytics.
-
-  - name: mart_circonscription_activity
-    description: One row per circonscription with deputes and interventions aggregates.
-
-  - name: mart_dossiers_enriched
-    description: Enriched mart providing 360 view of legislative dossiers.
-
-  - name: mart_dossiers_votes_groupes
-    description: Mart aggregating vote counts by political group per dossier.
-  - name: mart_depute_place_hemicycle
-    description: Mart for mapping deputes to their place in the hemicycle.
+- name: mart_depute_place_hemicycle
+  description: Mart for mapping deputes to their place in the hemicycle.
