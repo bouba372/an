@@ -75,6 +75,7 @@ setup_prefect_variables:
 	prefect variable set deputes-url ${DEPUTES_URL}
 	prefect variable set scrutins-url ${SCRUTINS_URL}
 	prefect variable set dossiers-legislatifs-url ${DOSSIERS_LEGISLATIFS_URL}
+	prefect variable set amendements-url ${AMENDEMENTS_URL}
 	prefect variable set questions-ecrites-url ${QUESTIONS_ECRITES_URL}
 
 deploy_flows: ## Deploy all flows from prefect.yaml

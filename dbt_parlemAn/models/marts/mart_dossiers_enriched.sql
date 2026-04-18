@@ -44,14 +44,14 @@ scrutins as (
     from {{ ref('int_dossier_scrutins') }}
 ),
 
-/* amendements as (
+amendements as (
     select
         dossier_uid,
         nombre_amendements_total,
         nombre_amendements_adoptes,
         nombre_amendements_rejetes
     from {{ ref('int_dossier_amendements') }}
-) */
+)
 
 select
     d.dossier_uid,
