@@ -74,11 +74,14 @@ def parse_and_load_amendements(
             "amendement_signataires": amendements.signataires,
             "amendement_cosignataires": amendements.cosignataires,
         }
-        load_all_tables(
+        loaded_rows = load_all_tables(
             table_rows=table_rows,
             schemas=AMENDEMENTS_SCHEMAS,
             config=config,
         )
+        for table_name, row_count in loaded_rows.items():
+            total_loaded_rows[table_name] += row_count
+        batch_count += 1
         publish_load_summary_artifact(total_loaded_rows, batch_count)
     finally:
         cleanup_temp_file(zip_file_path)
@@ -89,6 +92,10 @@ def parse_and_load_amendements(
 @flow
 def amendements_flow() -> None:
     config = get_config()
+    if not config.amendements_url:
+        raise ValueError(
+            "AMENDEMENTS_URL must be set to run amendements_flow"
+        )
     zip_file_path = fetch_zip_to_file(config.amendements_url)
     parse_and_load_amendements(zip_file_path, config)
 

@@ -5,6 +5,8 @@ import tempfile
 from pathlib import Path
 
 from dotenv import load_dotenv
+from google.api_core.exceptions import NotFound
+from google.cloud import bigquery
 from prefect import flow, get_run_logger, task
 from prefect.artifacts import create_markdown_artifact
 
@@ -12,6 +14,25 @@ from lib.config import ProjectConfig, get_config
 
 
 load_dotenv()
+
+
+REQUIRED_RAW_TABLES: tuple[str, ...] = (
+    "acteurs",
+    "mandats",
+    "organes",
+    "interventions",
+    "points_seance",
+    "comptes_rendus",
+    "scrutins",
+    "questions_ecrites",
+    "questions_ecrites_renouvellements",
+    "scrutin_votes_individuels",
+    "scrutin_groupes_votes",
+    "documents",
+    "dossiers_parlementaires",
+    "dossier_actes_legislatifs",
+    "amendements",
+)
 
 
 def _profiles_yml_content(
@@ -33,6 +54,23 @@ def _profiles_yml_content(
     )
 
 
+def _get_missing_source_tables(config: ProjectConfig) -> list[str]:
+    client = bigquery.Client.from_service_account_info(
+        config.service_account_info,
+        project=config.gcp_project,
+    )
+
+    missing_tables: list[str] = []
+    for table_name in REQUIRED_RAW_TABLES:
+        table_id = f"{config.gcp_project}.{config.bq_dataset}.{table_name}"
+        try:
+            client.get_table(table_id)
+        except NotFound:
+            missing_tables.append(table_name)
+
+    return missing_tables
+
+
 @task
 def run_dbt_build(
     config: ProjectConfig,
@@ -41,6 +79,22 @@ def run_dbt_build(
     full_refresh: bool = False,
 ) -> None:
     logger = get_run_logger()
+
+    missing_tables = _get_missing_source_tables(config)
+    if missing_tables:
+        missing_table_list = ", ".join(sorted(missing_tables))
+        logger.error(
+            "Missing required raw source tables in %s.%s: %s",
+            config.gcp_project,
+            config.bq_dataset,
+            missing_table_list,
+        )
+        raise RuntimeError(
+            "Missing required BigQuery raw source tables before dbt build: "
+            f"{missing_table_list}. "
+            "Run the ingestion deployments first (deputes, debats, scrutins, "
+            "dossiers_legislatifs, questions_ecrites, amendements)."
+        )
 
     project_dir = Path(__file__).resolve().parents[1] / "dbt_parlemAn"
 

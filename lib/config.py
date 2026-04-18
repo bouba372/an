@@ -47,7 +47,7 @@ def get_config() -> ProjectConfig:
             scrutins_url=os.environ["SCRUTINS_URL"],
             questions_ecrites_url=os.environ["QUESTIONS_ECRITES_URL"],
             dossiers_legislatifs_url=os.environ["DOSSIERS_LEGISLATIFS_URL"],
-            amendements_url=os.environ["AMENDEMENTS_URL"],
+            amendements_url=os.getenv("AMENDEMENTS_URL", ""),
             service_account_info=_get_service_account_info(),
         )
     except KeyError as e:
