@@ -1,4 +1,5 @@
 import json
+import logging
 from os import getenv
 import subprocess
 import tempfile
@@ -7,13 +8,13 @@ from pathlib import Path
 from dotenv import load_dotenv
 from google.api_core.exceptions import NotFound
 from google.cloud import bigquery
-from prefect import flow, get_run_logger, task
-from prefect.artifacts import create_markdown_artifact
 
 from lib.config import ProjectConfig, get_config
 
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 
 REQUIRED_RAW_TABLES: tuple[str, ...] = (
@@ -71,15 +72,12 @@ def _get_missing_source_tables(config: ProjectConfig) -> list[str]:
     return missing_tables
 
 
-@task
 def run_dbt_build(
     config: ProjectConfig,
     target: str = "prod",
     select: str | None = None,
     full_refresh: bool = False,
 ) -> None:
-    logger = get_run_logger()
-
     missing_tables = _get_missing_source_tables(config)
     if missing_tables:
         missing_table_list = ", ".join(sorted(missing_tables))
@@ -137,21 +135,16 @@ def run_dbt_build(
     if result.returncode != 0:
         raise RuntimeError(f"dbt build failed with exit code {result.returncode}")
 
-    create_markdown_artifact(
-        key="dbt-build-summary",
-        markdown=(
-            f"### dbt build succeeded\n"
-            f"- target: `{target}`\n"
-            f"- project: `{config.gcp_project}`\n"
-            f"- dataset: `{config.bq_dataset}`\n"
-            f"- select: `{select or 'all'}`\n"
-            f"- full_refresh: `{full_refresh}`"
-        ),
-        description="dbt build execution summary",
+    logger.info(
+        "dbt build succeeded for target=%s project=%s dataset=%s select=%s full_refresh=%s",
+        target,
+        config.gcp_project,
+        config.bq_dataset,
+        select or "all",
+        full_refresh,
     )
 
 
-@flow
 def dbt_build_flow(
     target: str = "prod",
     select: str | None = None,

@@ -1,8 +1,8 @@
 from collections.abc import Mapping
+import logging
 from typing import Sequence
 
 from dotenv import load_dotenv
-from prefect.artifacts import create_table_artifact
 
 from lib.bq_utils.models import BigQueryRow
 from lib.config import ProjectConfig, get_config
@@ -16,65 +16,52 @@ from lib.depute.parsing import (
     parse_organes,
 )
 from lib.bq_utils import load_all_tables
-from prefect import flow, get_run_logger, task
-from prefect.tasks import task_input_hash
 
 from lib.extract import fetch_zip_file
 
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
 
-@task(cache_key_fn=task_input_hash, cache_expiration=None)
+
 def fetch_zip(url: str) -> bytes:
-    logger = get_run_logger()
     logger.info(f"Downloading {url}")
     content = fetch_zip_file(url)
     logger.info(f"Downloaded {len(content):,} bytes")
     return content
 
 
-@task
 def parse_acteurs_table(zip_bytes: bytes) -> list[ActeurRow]:
-    logger = get_run_logger()
     rows = parse_acteurs(zip_bytes)
     logger.info(f"Parsed {len(rows)} acteurs")
     return rows
 
 
-@task
 def parse_adresses_table(zip_bytes: bytes) -> list[AdresseRow]:
-    logger = get_run_logger()
     rows = parse_adresses(zip_bytes)
     logger.info(f"Parsed {len(rows)} adresses")
     return rows
 
 
-@task
 def parse_mandats_table(zip_bytes: bytes) -> list[MandatRow]:
-    logger = get_run_logger()
     rows = parse_mandats(zip_bytes)
     logger.info(f"Parsed {len(rows)} mandats")
     return rows
 
 
-@task
 def parse_organes_table(zip_bytes: bytes) -> list[OrganeRow]:
-    logger = get_run_logger()
     rows = parse_organes(zip_bytes)
     logger.info(f"Parsed {len(rows)} organes")
     return rows
 
 
-@task
 def parse_deports_table(zip_bytes: bytes) -> list[DeportRow]:
-    logger = get_run_logger()
     rows = parse_deports(zip_bytes)
     logger.info(f"Parsed {len(rows)} deports")
     return rows
 
 
-@task
 def load_to_bigquery(
     acteurs: list[ActeurRow],
     adresses: list[AdresseRow],
@@ -96,20 +83,12 @@ def load_to_bigquery(
         config=config,
     )
 
-    create_table_artifact(
-        key="bq-load-summary",
-        table=[
-            {
-                "table": table_name,
-                "loaded_rows": loaded_rows[table_name],
-            }
-            for table_name in table_rows
-        ],
-        description="depute load summary by table",
+    logger.info(
+        "Loaded rows summary: %s",
+        {table_name: loaded_rows[table_name] for table_name in table_rows},
     )
 
 
-@flow(name="an-deputes-pipeline", log_prints=True)
 def an_deputes_flow() -> None:
     config = get_config()
     zip_bytes = fetch_zip(config.deputes_url)

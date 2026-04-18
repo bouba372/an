@@ -1,12 +1,13 @@
 # ParlemAN
 
-Pipeline for fetching/parsing French National Assembly data, with BigQuery loading and Metabase visualization.
+Pipeline for fetching/parsing French National Assembly data, with BigQuery loading, Airflow orchestration, and Metabase visualization.
 
 ## Project Structure
 
 ```text
 config/           # Configuration templates
-flows/            # Prefect pipeline orchestration
+dags/             # Airflow DAG definitions
+flows/            # Pipeline logic callable from Airflow tasks
 infra/            # Docker Compose stack
 lib/              # Core modules (parsing, loading, validation)
 scripts/          # Utility scripts and SQL views
@@ -79,11 +80,11 @@ gcloud iam service-accounts create "$SA_RUNNER_NAME" \
 
 For worker (invokes jobs on Cloud Run):
 ```bash
-export SA_WORKER_NAME="parleman-prefect-worker"
+export SA_WORKER_NAME="parleman-airflow-worker"
 
 gcloud iam service-accounts create "$SA_WORKER_NAME" \
   --project "$GCP_PROJECT" \
-  --display-name "ParlemAN Prefect Worker"
+  --display-name "ParlemAN Airflow Worker"
 ```
 
 2. Grant minimal roles:
@@ -132,9 +133,24 @@ GOOGLE_APPLICATION_CREDENTIALS=.secrets/parleman-sa.json
 
 ## Run Pipeline
 
+The orchestration layer uses Airflow DAGs in [dags/parleman.py](dags/parleman.py).
+
+Build and start the local Airflow stack:
+
 ```bash
-uv run python -m flows.upload_deputes_bq
+docker compose -f infra/docker-compose.yml up -d --build airflow-postgres airflow-init airflow-webserver airflow-scheduler
 ```
+
+Airflow UI: http://localhost:8080
+
+Available DAGs:
+- `deputes`
+- `debats`
+- `scrutins`
+- `dossiers_legislatifs`
+- `amendements`
+- `questions_ecrites`
+- `dbt_build`
 
 ## Metabase (local)
 
@@ -151,8 +167,7 @@ cp config/metabase.env.example config/metabase.env
 3. Start Metabase:
 
 ```bash
-cd infra
-docker compose up -d
+docker compose -f infra/docker-compose.yml up -d metabase-db metabase
 ```
 
 Access:
@@ -176,66 +191,18 @@ Configure BigQuery connection in Metabase:
 Stop Metabase:
 
 ```bash
-cd infra
-docker compose down
+docker compose -f infra/docker-compose.yml stop metabase metabase-db
 ```
 
-## Prefect (local)
+## Airflow Deployment
+
+Build the Airflow image used by the local stack or by a managed runtime:
 
 ```bash
-docker run -p 4200:4200 -d --rm prefecthq/prefect:3-latest -- prefect server start --host 0.0.0.0
+make build_airflow_image
 ```
 
-## Prefect Deployment (Cloud Run)
-
-### Prerequisites
-
-- GCP project configured (`parleman-491810`)
-- `gcloud` CLI authenticated
-- Prefect Cloud account
-
-### 1. Setup GCP Region
-
-```bash
-gcloud config set run/region my-region
-```
-
-### 2. Create Prefect Variables
-
-Store environment variables in Prefect:
-
-```bash
-make setup_prefect_variables
-```
-Store sensitive service account JSON and github token variables (names «github-token» and «gcp-service-account-info»):
-
-```bash
-prefect block create secret
-```
-
-### 3. Deploy Prefect Worker
-
-Deploy a Prefect worker to Cloud Run:
-
-```bash
-gcloud run deploy prefect-worker \
-  --image=europe-west1-docker.pkg.dev/${GCP_PROJECT}/parleman-artifact-repo/prefect-worker \
-  --set-env-vars PREFECT_API_URL=${PREFECT_API_URL} \
-  --service-account ${SA_WORKER_NAME}@${GCP_PROJECT}.iam.gserviceaccount.com \
-  --no-cpu-throttling \
-  --min-instances 1 \
-  --memory=2Gi \
-  --startup-probe httpGet.port=8080,httpGet.path=/health,initialDelaySeconds=100,periodSeconds=20,timeoutSeconds=20 \
-  --args "prefect","worker","start","--install-policy","never","--with-healthcheck","-p","parleman-work-pool","-t","cloud-run"
-```
-
-### 4. Deploy Flows
-
-```bash
-prefect deploy
-```
-
-This reads configuration from `prefect.yaml` and deploys flows to your work pool.
+The image is defined in [infra/airflow/Dockerfile](infra/airflow/Dockerfile) and keeps the repository code on `PYTHONPATH` so the DAGs can import the existing parsing modules directly.
 
 
 ### Using the starter dbt parlemAn project

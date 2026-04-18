@@ -1,10 +1,8 @@
 from collections.abc import Mapping
+import logging
 from typing import Sequence
 
 from dotenv import load_dotenv
-from prefect import flow, get_run_logger, task
-from prefect.artifacts import create_table_artifact
-from prefect.tasks import task_input_hash
 
 from lib.bq_utils import load_all_tables
 from lib.bq_utils.models import BigQueryRow
@@ -19,19 +17,17 @@ from lib.extract import fetch_zip_file
 
 load_dotenv()
 
+logger = logging.getLogger(__name__)
 
-@task(cache_key_fn=task_input_hash, cache_expiration=None)
+
 def fetch_zip(url: str) -> bytes:
-    logger = get_run_logger()
     logger.info(f"Downloading {url}")
     content = fetch_zip_file(url)
     logger.info(f"Downloaded {len(content):,} bytes")
     return content
 
 
-@task
 def parse_dossiers_table(zip_bytes: bytes) -> DossiersParseResult:
-    logger = get_run_logger()
     result = parse_dossiers_legislatifs(zip_bytes)
     logger.info(f"Parsed {len(result.documents)} documents")
     logger.info(f"Parsed {len(result.dossiers_parlementaires)} dossiers parlementaires")
@@ -39,7 +35,6 @@ def parse_dossiers_table(zip_bytes: bytes) -> DossiersParseResult:
     return result
 
 
-@task
 def load_to_bigquery(
     dossiers_result: DossiersParseResult, config: ProjectConfig
 ) -> None:
@@ -55,20 +50,12 @@ def load_to_bigquery(
         config=config,
     )
 
-    create_table_artifact(
-        key="bq-load-summary",
-        table=[
-            {
-                "table": table_name,
-                "loaded_rows": loaded_rows[table_name],
-            }
-            for table_name in table_payloads
-        ],
-        description="dossiers legislatifs load summary by table",
+    logger.info(
+        "Loaded rows summary: %s",
+        {table_name: loaded_rows[table_name] for table_name in table_payloads},
     )
 
 
-@flow
 def dossiers_legislatifs_flow() -> None:
     config = get_config()
     zip_bytes = fetch_zip(config.dossiers_legislatifs_url)

@@ -33,60 +33,31 @@ variable "SQL_TIER" {
   default     = "db-custom-2-7680"
 }
 
-variable "PREFECT_DB_NAME" {
+variable "AIRFLOW_DB_NAME" {
   type        = string
-  description = "Prefect database name"
-  default     = "prefect"
+  description = "Airflow metadata database name"
+  default     = "airflow"
 }
 
-variable "METABASE_DB_NAME" {
+variable "AIRFLOW_DB_USER" {
   type        = string
-  description = "Metabase database name"
-  default     = "metabase"
+  description = "Airflow metadata database user"
+  default     = "airflow"
 }
 
-variable "PREFECT_DB_USER" {
+variable "AIRFLOW_DB_PASSWORD" {
   type        = string
-  description = "Prefect database user"
-  default     = "prefect"
-}
-
-variable "METABASE_DB_USER" {
-  type        = string
-  description = "Metabase database user"
-  default     = "metabase"
-}
-
-variable "PREFECT_DB_PASSWORD" {
-  type        = string
-  description = "Prefect database password"
+  description = "Airflow metadata database password"
   sensitive   = true
 }
 
-variable "METABASE_DB_PASSWORD" {
+variable "AIRFLOW_DB_SECRET" {
   type        = string
-  description = "Metabase database password"
-  sensitive   = true
+  description = "Secret Manager secret ID for Airflow DB password"
+  default     = "airflow-db-password"
 }
 
-variable "PREFECT_DB_SECRET" {
+variable "AIRFLOW_SA" {
   type        = string
-  description = "Secret Manager secret ID for Prefect DB password"
-  default     = "prefect-db-password"
-}
-
-variable "METABASE_DB_SECRET" {
-  type        = string
-  description = "Secret Manager secret ID for Metabase DB password"
-  default     = "metabase-db-password"
-}
-
-variable "PREFECT_SERVER_SA" {
-  type        = string
-  description = "Service account email used by Prefect server"
-}
-
-variable "METABASE_SA" {
-  type        = string
-  description = "Service account email used by Metabase"
+  description = "Service account email used by Airflow"
 }

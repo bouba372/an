@@ -1,8 +1,8 @@
 from collections.abc import Iterable, Mapping
+import logging
 from uuid import uuid4
 
 from google.cloud import bigquery
-from prefect import get_run_logger
 
 from lib.bq_utils.client import create_bq_client
 from lib.bq_utils.chunking import iter_chunked_rows
@@ -16,6 +16,9 @@ from lib.bq_utils.staging import (
 )
 from lib.bq_utils.validation import ensure_dataset, validate_rows_for_table
 from lib.config import ProjectConfig
+
+
+logger = logging.getLogger(__name__)
 
 
 def _load_rows_to_table_id(
@@ -48,7 +51,6 @@ def load_all_tables_by_batches(
     config: ProjectConfig,
     run_id: str | None = None,
 ) -> Mapping[str, int]:
-    logger = get_run_logger()
     logger.info("connecting to big query...")
     bq_client = create_bq_client(config)
     logger.info("Finished connecting to big query")
