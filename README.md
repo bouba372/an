@@ -1,6 +1,6 @@
 # ParlemAN
 
-Pipeline for fetching/parsing French National Assembly data, with BigQuery loading, Airflow orchestration, and Metabase visualization.
+Pipeline for fetching/parsing French National Assembly data, with BigQuery loading, Airflow orchestration, and Streamlit analytics.
 
 ## Project Structure
 
@@ -8,6 +8,7 @@ Pipeline for fetching/parsing French National Assembly data, with BigQuery loadi
 config/           # Configuration templates
 dags/             # Airflow DAG definitions
 flows/            # Pipeline logic callable from Airflow tasks
+streamlit_app.py  # Streamlit dashboard
 infra/            # Docker Compose stack
 lib/              # Core modules (parsing, loading, validation)
 scripts/          # Utility scripts and SQL views
@@ -152,46 +153,27 @@ Available DAGs:
 - `questions_ecrites`
 - `dbt_build`
 
-## Metabase (local)
+## Streamlit (local)
 
 Requires: Docker + Docker Compose.
 
-1. Setup environment:
+1. Ensure your `.env` includes `SERVICE_ACCOUNT_INFO` pointing to a readable service account JSON.
+
+2. Start Streamlit:
 
 ```bash
-cp config/metabase.env.example config/metabase.env
-```
-
-2. Set strong encryption key in `config/metabase.env`
-
-3. Start Metabase:
-
-```bash
-docker compose -f infra/docker-compose.yml up -d metabase-db metabase
+docker compose -f infra/docker-compose.yml up -d --build streamlit
 ```
 
 Access:
-- Metabase: http://localhost:3000
-- Adminer (inspect internal PostgreSQL): http://localhost:8080
+- Streamlit: http://localhost:8501
 
-Adminer credentials:
-- System: PostgreSQL
-- Server: metabase-db
-- Username: metabase
-- Password: metabase
-- Database: metabase
+The dashboard reads from the BigQuery dataset configured in `.env` and uses the service account referenced by `SERVICE_ACCOUNT_INFO`.
 
-Configure BigQuery connection in Metabase:
-- Admin settings > Databases > Add database
-- Type: BigQuery
-- Project ID: parleman-491810
-- Dataset: ParlemAN_tests
-- Authentication: Upload service account JSON
-
-Stop Metabase:
+Stop Streamlit:
 
 ```bash
-docker compose -f infra/docker-compose.yml stop metabase metabase-db
+docker compose -f infra/docker-compose.yml stop streamlit
 ```
 
 ## Airflow Deployment

@@ -26,40 +26,23 @@ resource "google_project_service" "services" {
   disable_on_destroy = false
 }
 
-resource "google_sql_database_instance" "postgres" {
-  name                = var.SQL_INSTANCE
-  region              = var.GCP_REGION
-  database_version    = var.SQL_DB_VERSION
-  deletion_protection = true
+data "google_sql_database_instance" "postgres" {
+  project = var.GCP_PROJECT
+  name    = var.SQL_INSTANCE
+}
 
-  settings {
-    edition = var.SQL_EDITION
-    tier    = var.SQL_TIER
-
-    disk_autoresize = true
-    disk_size       = 20
-    disk_type       = "PD_SSD"
-
-    backup_configuration {
-      enabled                        = true
-      point_in_time_recovery_enabled = true
-    }
-
-    ip_configuration {
-      ipv4_enabled = true
-    }
-  }
-
-  depends_on = [google_project_service.services]
+resource "google_service_account" "airflow" {
+  account_id   = "parleman-airflow-worker"
+  display_name = "ParlemAN Airflow Worker"
 }
 
 resource "google_sql_database" "airflow" {
   name     = var.AIRFLOW_DB_NAME
-  instance = google_sql_database_instance.postgres.name
+  instance = data.google_sql_database_instance.postgres.name
 }
 
 resource "google_sql_user" "airflow" {
-  instance = google_sql_database_instance.postgres.name
+  instance = data.google_sql_database_instance.postgres.name
   name     = var.AIRFLOW_DB_USER
   password = var.AIRFLOW_DB_PASSWORD
 }
@@ -83,17 +66,17 @@ resource "google_secret_manager_secret_version" "airflow_db_password" {
 resource "google_project_iam_member" "airflow_cloudsql_client" {
   project = var.GCP_PROJECT
   role    = "roles/cloudsql.client"
-  member  = "serviceAccount:${var.AIRFLOW_SA}"
+  member  = "serviceAccount:${google_service_account.airflow.email}"
 }
 
 resource "google_project_iam_member" "airflow_secret_accessor" {
   project = var.GCP_PROJECT
   role    = "roles/secretmanager.secretAccessor"
-  member  = "serviceAccount:${var.AIRFLOW_SA}"
+  member  = "serviceAccount:${google_service_account.airflow.email}"
 }
 
 output "sql_connection_name" {
-  value = google_sql_database_instance.postgres.connection_name
+  value = data.google_sql_database_instance.postgres.connection_name
 }
 
 output "airflow_db_secret" {
