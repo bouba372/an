@@ -444,6 +444,44 @@ DAG deployment automatically updates the profile with current GCP project and da
   - `artifactregistry.reader` - Pull container images
   - `iam.serviceAccountUser` - Use service account credentials
 
+## CI/CD
+
+This repository includes a single GitHub Actions workflow in [.github/workflows/ci.yml](.github/workflows/ci.yml), with both CI and CD jobs.
+
+### CI
+
+CI runs on push and pull request for `main` and `dev`, plus manual trigger (`workflow_dispatch`).
+
+Checks executed:
+- Ruff lint (`uv run ruff check .`)
+- Mypy (`uv run mypy .`)
+- Pytest (`uv run pytest tests`)
+
+### CD (Streamlit to Cloud Run)
+
+CD is in the same workflow file and runs only on push to `main` (after CI jobs pass), plus manual trigger via `workflow_dispatch`.
+
+To enable deployment, configure these repository settings:
+
+Repository variables:
+- `GCP_PROJECT` (required)
+- `GCP_REGION` (optional, default: `europe-west1`)
+- `GAR_REPOSITORY` (optional, default: `parleman`)
+- `STREAMLIT_IMAGE` (optional, default: `parleman-streamlit`)
+- `STREAMLIT_SERVICE` (optional, default: `parleman-streamlit`)
+- `BQ_DATASET` (optional)
+
+Repository secrets:
+- `GCP_WIF_PROVIDER` (required, Workload Identity Provider resource name)
+- `GCP_WIF_SERVICE_ACCOUNT` (required, service account used by GitHub Actions)
+- `GCP_DEPLOY_SERVICE_ACCOUNT` (optional, service account attached to Cloud Run service)
+
+The deployment job builds and pushes two tags to Artifact Registry:
+- `${GITHUB_SHA}`
+- `latest`
+
+Then it deploys the Streamlit service to Cloud Run with the SHA image.
+
 ## Architecture
 
 ```
