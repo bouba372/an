@@ -29,6 +29,26 @@ models:
   - name: mandat_uid
     tests:
     - not_null
+  - name: depute_uid
+    tests:
+    - relationships:
+        arguments:
+          to: ref('stg_deputes')
+          field: depute_uid
+  - name: organe_uid
+    tests:
+    - relationships:
+        arguments:
+          to: ref('stg_organes')
+          field: organe_uid
+
+- name: stg_deputes
+  description: Staging model for deputes data.
+  columns:
+  - name: depute_uid
+    tests:
+    - not_null
+    - unique
 
 - name: stg_organes
   description: Staging model for organes data.
@@ -45,6 +65,12 @@ models:
     tests:
     - not_null
     - unique
+  - name: dossier_uid
+    tests:
+    - relationships:
+        arguments:
+          to: ref('stg_dossiers_parlementaires')
+          field: dossier_uid
 
 - name: stg_dossiers_parlementaires
   description: Staging model for parliamentary dossiers.
@@ -60,6 +86,63 @@ models:
   - name: dossier_uid
     tests:
     - not_null
+    - relationships:
+        arguments:
+          to: ref('stg_dossiers_parlementaires')
+          field: dossier_uid
+  - name: acte_uid
+    tests:
+    - not_null
+
+- name: stg_interventions
+  description: Staging model for interventions.
+  columns:
+  - name: intervention_id
+    tests:
+    - not_null
+    - unique
+  - name: compte_rendu_uid
+    tests:
+    - not_null
+
+- name: stg_scrutins
+  description: Staging model for scrutins.
+  columns:
+  - name: scrutin_uid
+    tests:
+    - not_null
+    - unique
+  - name: organe_ref
+    tests:
+    - relationships:
+        arguments:
+          to: ref('stg_organes')
+          field: organe_uid
+
+- name: stg_scrutin_votes_individuels
+  description: Staging model for individual votes in scrutins.
+  columns:
+  - name: scrutin_uid
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('stg_scrutins')
+          field: scrutin_uid
+  - name: depute_uid
+    tests:
+    - not_null
+
+- name: stg_scrutin_groupes_votes
+  description: Staging model for group votes in scrutins.
+  columns:
+  - name: scrutin_uid
+    tests:
+    - not_null
+    - relationships:
+        arguments:
+          to: ref('stg_scrutins')
+          field: scrutin_uid
 
 - name: int_depute_mandats
   description: Intermediate model linking deputes and mandats.
