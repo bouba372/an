@@ -14,6 +14,7 @@ from flows.upload_deputes_bq import an_deputes_flow
 from flows.upload_dossiers_legislatifs_bq import dossiers_legislatifs_flow
 from flows.upload_questions_ecrites_bq import questions_ecrites_flow
 from flows.upload_scrutins_bq import scrutin_flow
+from flows.train_text_classification import text_classification_train_dag
 
 
 PARIS_TZ = ZoneInfo("Europe/Paris")

@@ -15,6 +15,14 @@ dependencies = [
     "python-dotenv>=1.0.1",
     "requests>=2.32.0",
     "streamlit>=1.44.0",
+    "transformers>=4.40.0",
+    "accelerate>=1.1.0",
+    "torch>=2.2.0",
+    "scikit-learn>=1.5.0",
+    "datasets>=2.20.0",
+    "mlflow>=2.14.0",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
 ]
 
 [dependency-groups]
@@ -27,7 +35,7 @@ dev = [
 ]
 
 [tool.setuptools]
-packages = ["lib", "flows"]
+packages = ["lib", "flows", "mlops"]
 
 [tool.mypy]
 disable_error_code = ["untyped-decorator"]

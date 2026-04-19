@@ -13,6 +13,7 @@ AIRFLOW_SCHEDULER_RUN_CPU ?= 1
 STREAMLIT_IMAGE ?= parleman-streamlit
 STREAMLIT_SERVICE ?= parleman-streamlit
 STREAMLIT_PORT ?= 8501
+PYTHON ?= .venv/bin/python
 
 .PHONY: help
 help: ## Show available make targets
@@ -164,3 +165,59 @@ airflow_run_url: ## Print Cloud Run URL for Airflow webserver
 		url="$$(gcloud run services describe ${AIRFLOW_RUN_SERVICE} --project "$${GCP_PROJECT}" --region "$${GCP_REGION}" --format="value(status.url)")"; \
 		echo "AIRFLOW_RUN_URL=$$url"; \
 		echo "AIRFLOW_RUN_URL_CANONICAL=$$canonical_url"'
+# MLOps targets
+INFERENCE_IMAGE ?= parleman-inference
+MLFLOW_SERVICE ?= parleman-mlflow
+
+mlops_train: ## Train text classification model locally
+	@bash -lc '$(PYTHON) -c "from mlops.training import train_flow; train_flow()"'
+
+mlflow_up: ## Start local MLflow tracking server
+	docker compose -f ${LOCAL_COMPOSE_FILE} up -d --build mlflow
+
+mlflow_down: ## Stop local MLflow server
+	docker compose -f ${LOCAL_COMPOSE_FILE} stop mlflow
+
+mlflow_logs: ## Follow local MLflow logs
+	docker compose -f ${LOCAL_COMPOSE_FILE} logs -f mlflow
+
+inference_up: ## Start local inference API
+	docker compose -f ${LOCAL_COMPOSE_FILE} up -d --build inference
+
+inference_down: ## Stop local inference API
+	docker compose -f ${LOCAL_COMPOSE_FILE} stop inference
+
+inference_logs: ## Follow local inference logs
+	docker compose -f ${LOCAL_COMPOSE_FILE} logs -f inference
+
+build_inference_image: ## Build image for inference API (Linux/amd64 platform)
+	@echo "Building inference image for GCP..."
+	docker build --platform linux/amd64 -t europe-west1-docker.pkg.dev/${GCP_PROJECT}/${DOCKER_REGISTRY}/${INFERENCE_IMAGE} -f infra/inference/Dockerfile .
+
+push_inference_image: build_inference_image ## Build and push inference image to Artifact Registry
+	docker push europe-west1-docker.pkg.dev/${GCP_PROJECT}/${DOCKER_REGISTRY}/${INFERENCE_IMAGE}
+
+inference_deploy: push_inference_image ## Deploy inference API to Cloud Run
+	@bash -lc 'set -euo pipefail; \
+: "$${GCP_PROJECT:?Set GCP_PROJECT in .env}"; \
+: "$${GCP_REGION:?Set GCP_REGION in .env}"; \
+image="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${DOCKER_REGISTRY}/${INFERENCE_IMAGE}"; \
+gcloud run deploy ${MLFLOW_SERVICE} \
+--project "$${GCP_PROJECT}" \
+--region "$${GCP_REGION}" \
+--image "$$image" \
+--service-account "${AIRFLOW_SA}" \
+--allow-unauthenticated \
+--port 8000 \
+--memory 4Gi \
+--cpu 2; \
+url="$$(gcloud run services describe ${MLFLOW_SERVICE} --project "$${GCP_PROJECT}" --region "$${GCP_REGION}" --format="value(status.url)")"; \
+echo "Inference API deployed at: $$url"'
+
+mlops_test_predict: ## Test inference API with sample predictions
+	@bash -lc 'curl -X POST http://localhost:8000/predict \
+-H "Content-Type: application/json" \
+-d "{\"texts\": [\"La politique de santé est prioritaire\", \"Le budget de la défense augmente\"], \"return_confidence\": true}"'
+
+mlops_test_classify: ## Test classifier locally
+	@bash -lc '$(PYTHON) -c "from mlops.models.classifier import TextClassifier; c = TextClassifier(); print(c.predict(\"La santé publique est importante\"))"'

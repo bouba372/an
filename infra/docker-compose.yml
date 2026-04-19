@@ -93,5 +93,44 @@ services:
       - ../streamlit_app.py:/app/streamlit_app.py
       - ../lib:/app/lib
 
+  mlflow:
+    build:
+      context: ..
+      dockerfile: infra/mlflow/Dockerfile
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    ports:
+      - "5000:5000"
+    volumes:
+      - mlflow_data:/tmp
+    environment:
+      MLFLOW_TRACKING_URI: "file:///tmp/mlflow-runs"
+
+  inference:
+    build:
+      context: ..
+      dockerfile: infra/inference/Dockerfile
+    command: ["python", "-m", "uvicorn", "mlops.inference:app", "--host", "0.0.0.0", "--port", "8000"]
+    restart: unless-stopped
+    env_file:
+      - ../.env
+    depends_on:
+      - mlflow
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../mlops:/app/mlops
+      - ../lib:/app/lib
+      - ../flows:/app/flows
+      - model_cache:/models
+    environment:
+      MLFLOW_TRACKING_URI: "http://mlflow:5000"
+      MODEL_PATH: /models/final_model
+      INFERENCE_HOST: "0.0.0.0"
+      INFERENCE_PORT: "8000"
+
 volumes:
   airflow_postgres_data:
+  mlflow_data:
+  model_cache:

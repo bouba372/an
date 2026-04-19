@@ -431,6 +431,40 @@ Configuration is held in `dbt_parlemAn/profiles.yml` (auto-generated from `.env`
 
 DAG deployment automatically updates the profile with current GCP project and dataset settings.
 
+## MLOps: Text Classification
+
+Classify French parliamentary interventions into topic categories.
+
+### Quick Start
+
+**Local Setup:**
+
+1. Start MLflow tracking server:
+   ```bash
+   make mlflow_up
+   ```
+
+2. Start inference API:
+   ```bash
+   make inference_up
+   ```
+
+3. Train model:
+   ```bash
+   make mlops_train
+   ```
+
+4. Test predictions:
+   ```bash
+   curl -X POST http://localhost:8000/predict \
+     -H "Content-Type: application/json" \
+     -d '{"texts": "La politique de santé est importante"}'
+   ```
+
+### Additional Resources
+
+For full MLOps documentation (architecture, configuration, deployment and ops), see [MLOPS.md](MLOPS.md).
+
 ## Security
 
 - **Never commit real `.env` files**: Use `.env.example` as a template for team distribution
@@ -471,15 +505,17 @@ DAG deployment automatically updates the profile with current GCP project and da
     │   (Raw data tables)               │
     └────┬──────────────────────────────┘
          │
-    ┌────▼──────────────────────────────┐
-    │    dbt Transformations            │
-    │   (marts/ staging/ intermediate/) │
-    └────┬──────────────────────────────┘
-         │
-    ┌────▼──────────────────────────────┐
-    │   Streamlit Analytics Dashboard   │
-    │   (Cloud Run or local on 8501)    │
-    └──────────────────────────────────┘
+    ┌────┴───────────────────┬──────────┐
+    │                        │          │
+┌───▼────────────┐  ┌─────────▼──┐  ┌───▼──────┐
+│  dbt Transform │  │ Text Classifi │  │Streamlit │
+│  (mart tables) │  │ cation (MLOps)│  │Dashboard │
+└────────────────┘  └───────┬──────┘  └──────────┘
+                            │
+                    ┌───────▼───────┐
+                    │ Inference API │
+                    │  (FastAPI)    │
+                    └───────────────┘
 ```
 
 ## Troubleshooting
