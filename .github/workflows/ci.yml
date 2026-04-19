@@ -3,25 +3,15 @@ name: CI
 on:
   push:
     branches:
-    - main
+    - dev
   pull_request:
     branches:
-    - main
+    - dev
   workflow_dispatch:
 
 
 permissions:
   contents: read
-  id-token: write
-
-env:
-  GCP_PROJECT: ${{ vars.GCP_PROJECT }}
-  GCP_REGION: ${{ vars.GCP_REGION || 'europe-west1' }}
-  GAR_REPOSITORY: ${{ vars.GAR_REPOSITORY || 'parleman' }}
-  STREAMLIT_IMAGE: ${{ vars.STREAMLIT_IMAGE || 'parleman-streamlit' }}
-  STREAMLIT_SERVICE: ${{ vars.STREAMLIT_SERVICE || 'parleman-streamlit' }}
-  BQ_DATASET: ${{ vars.BQ_DATASET }}
-  DEPLOY_SERVICE_ACCOUNT: ${{ secrets.GCP_DEPLOY_SERVICE_ACCOUNT }}
 
 jobs:
   lint:
@@ -71,68 +61,3 @@ jobs:
       run: uv sync --group dev
     - name: Run Pytest
       run: uv run pytest tests
-
-  deploy-streamlit:
-    name: Build and Deploy Streamlit
-    runs-on: ubuntu-latest
-    needs: [ lint, typecheck, test ]
-    if: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.GCP_PROJECT != '' }}
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v4
-
-    - name: Authenticate to Google Cloud
-      uses: google-github-actions/auth@v2
-      with:
-        workload_identity_provider: ${{ secrets.GCP_WIF_PROVIDER }}
-        service_account: ${{ secrets.GCP_WIF_SERVICE_ACCOUNT }}
-
-    - name: Setup gcloud SDK
-      uses: google-github-actions/setup-gcloud@v2
-
-    - name: Configure Docker for Artifact Registry
-      run: gcloud auth configure-docker "${GCP_REGION}-docker.pkg.dev" --quiet
-
-    - name: Build and push image
-      run: |
-        set -euo pipefail
-        IMAGE_BASE="${GCP_REGION}-docker.pkg.dev/${GCP_PROJECT}/${GAR_REPOSITORY}/${STREAMLIT_IMAGE}"
-        IMAGE_SHA="${IMAGE_BASE}:${GITHUB_SHA}"
-        IMAGE_LATEST="${IMAGE_BASE}:latest"
-
-        docker build --platform linux/amd64 -f infra/streamlit/Dockerfile -t "${IMAGE_SHA}" -t "${IMAGE_LATEST}" .
-        docker push "${IMAGE_SHA}"
-        docker push "${IMAGE_LATEST}"
-
-        echo "IMAGE_SHA=${IMAGE_SHA}" >> "$GITHUB_ENV"
-
-    - name: Deploy to Cloud Run
-      run: |
-        set -euo pipefail
-        set_env_vars="GCP_PROJECT=${GCP_PROJECT}"
-        if [[ -n "${BQ_DATASET:-}" ]]; then
-          set_env_vars="${set_env_vars},BQ_DATASET=${BQ_DATASET}"
-        fi
-
-        args=(
-          --project "${GCP_PROJECT}"
-          --region "${GCP_REGION}"
-          --image "${IMAGE_SHA}"
-          --allow-unauthenticated
-          --memory "2Gi"
-          --cpu "2"
-          --set-env-vars "${set_env_vars}"
-        )
-
-        if [[ -n "${DEPLOY_SERVICE_ACCOUNT:-}" ]]; then
-          args+=(--service-account "${DEPLOY_SERVICE_ACCOUNT}")
-        fi
-
-        gcloud run deploy "${STREAMLIT_SERVICE}" "${args[@]}"
-
-    - name: Show deployed URL
-      run: |
-        gcloud run services describe "${STREAMLIT_SERVICE}" \
-          --project "${GCP_PROJECT}" \
-          --region "${GCP_REGION}" \
-          --format='value(status.url)'
