@@ -1,8 +1,20 @@
-{{ config(materialized='table') }}
+{{ config(
+  materialized='incremental',
+  unique_key=['date_seance', 'legislature'],
+  incremental_strategy='insert_overwrite',
+  partition_by={"field": "date_seance", "data_type": "date"},
+  cluster_by=['legislature']
+) }}
 
 with interventions as (
     select *
     from {{ ref('int_interventions_enriched') }}
+    {% if is_incremental() %}
+    where date_seance >= date_sub(
+      coalesce((select max(date_seance) from {{ this }}), date('1900-01-01')),
+      interval 2 day
+    )
+    {% endif %}
 )
 
 select

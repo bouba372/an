@@ -1,4 +1,10 @@
-{{ config(materialized='view') }}
+{{ config(
+  materialized='incremental',
+  unique_key='scrutin_uid',
+  incremental_strategy='merge',
+  partition_by={"field": "date_scrutin", "data_type": "date"},
+  cluster_by=['legislature', 'organe_ref']
+) }}
 
 select
   uid as scrutin_uid,
@@ -32,3 +38,9 @@ select
   synthese_abstentions,
   synthese_non_votants_volontaires
 from {{ source('raw_parleman', 'scrutins') }}
+{% if is_incremental() %}
+where date_scrutin >= date_sub(
+  coalesce((select max(date_scrutin) from {{ this }}), date('1900-01-01')),
+  interval 2 day
+)
+{% endif %}

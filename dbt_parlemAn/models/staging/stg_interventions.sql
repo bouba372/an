@@ -1,4 +1,10 @@
-{{ config(materialized='view') }}
+{{ config(
+  materialized='incremental',
+  unique_key='intervention_id',
+  incremental_strategy='merge',
+  partition_by={"field": "date_seance", "data_type": "date"},
+  cluster_by=['compte_rendu_uid', 'depute_uid']
+) }}
 
 with interventions as (
     select *
@@ -35,3 +41,9 @@ select
 from interventions i
 left join comptes_rendus cr
   on i.compte_rendu_uid = cr.uid
+{% if is_incremental() %}
+where safe_cast(cr.date_seance as date) >= date_sub(
+  coalesce((select max(date_seance) from {{ this }}), date('1900-01-01')),
+  interval 2 day
+)
+{% endif %}
